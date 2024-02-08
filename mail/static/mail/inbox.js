@@ -27,6 +27,7 @@ function load_mailbox(mailbox) {
   
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
+  document.querySelector('#email-details').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'none';
 
   // Show the mailbox name
@@ -50,16 +51,11 @@ function load_mailbox(mailbox) {
         <span>${email.subject}</span>
         <span>${email.timestamp}</span>
       `
-      emailDiv.addEventListener('click', () => {
-    
-          email.read = true
-          emailDiv.classList.add('read')
-          emailDiv.classList.remove('unread')
-        
-      })
+      emailDiv.addEventListener('click', () => view_email(email.id,mailbox))
       document.querySelector('#emails-view').append(emailDiv)
     })
   })
+  .catch(error => console.error('Error loading mailbox:', error));
 }
 
 function send_email(event) {
@@ -83,7 +79,51 @@ function send_email(event) {
     load_mailbox('sent');
   })
   .catch(error => {
-    console.error('Hiba az email küldésekor:', error);
+    console.error('Error:', error);
   });
 
+}
+
+function view_email(email_id, mailbox) {
+  // Make a GET request to fetch the email details
+  fetch(`/emails/${email_id}`)
+  .then(response => response.json())
+  .then(email => {
+      // Display the email details in the email view
+      const emailDetailsDiv = document.querySelector('#email-details');
+      emailDetailsDiv.innerHTML = `
+          <strong>From:</strong> ${email.sender}<br>
+          <strong>To:</strong> ${email.recipients.join(', ')}<br>
+          <strong>Subject:</strong> ${email.subject}<br>
+          <strong>Timestamp:</strong> ${email.timestamp}<br>
+          <hr>
+          <div>${email.body}</div>
+      `;
+
+      // Show the email view and hide the mailbox view
+      document.querySelector('#emails-view').style.display = 'none';
+      document.querySelector('#email-details').style.display = 'block';
+
+      // Mark the email as read
+      if (mailbox === 'inbox' && !email.read) {
+          mark_email_as_read(email_id);
+      }
+  })
+  .catch(error => console.error('Error loading email:', error));
+}
+
+function mark_email_as_read(email_id) {
+  // Make a PUT request to mark the email as read
+  fetch(`/emails/${email_id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+          read: true
+      })
+  })
+  .then(response => {
+      if (!response.ok) {
+          throw new Error('Failed to mark email as read');
+      }
+  })
+  .catch(error => console.error('Error marking email as read:', error));
 }
