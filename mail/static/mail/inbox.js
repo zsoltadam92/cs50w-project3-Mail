@@ -100,9 +100,17 @@ function view_email(email_id, mailbox) {
           <div>${email.body}</div>
       `;
 
+      if (mailbox !== 'sent') {
+        emailDetailsDiv.innerHTML += `
+            <button id="archive">${email.archived ? "Unarchive" : "Archive"}</button>
+        `;
+        document.querySelector('#archive').addEventListener('click',() => archive_unarchive_emails(email_id,mailbox))
+    }
+
       // Show the email view and hide the mailbox view
       document.querySelector('#emails-view').style.display = 'none';
       document.querySelector('#email-details').style.display = 'block';
+  
 
       // Mark the email as read
       if (mailbox === 'inbox' && !email.read) {
@@ -126,4 +134,15 @@ function mark_email_as_read(email_id) {
       }
   })
   .catch(error => console.error('Error marking email as read:', error));
+}
+
+function archive_unarchive_emails(email_id,mailbox) {
+  fetch(`/emails/${email_id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+        archived: mailbox === 'inbox' ? true : false
+    })
+})
+.then(() => load_mailbox('inbox')) // Reload the inbox after archiving
+.catch(error => console.error('Error archiving email:', error));
 }
