@@ -1,10 +1,17 @@
 document.addEventListener('DOMContentLoaded', function() {
 
   // Use buttons to toggle between views
-  document.querySelector('#inbox').addEventListener('click', () => load_mailbox('inbox'));
-  document.querySelector('#sent').addEventListener('click', () => load_mailbox('sent'));
-  document.querySelector('#archived').addEventListener('click', () => load_mailbox('archive'));
-  document.querySelector('#compose').addEventListener('click', compose_email);
+  ['inbox', 'sent', 'archive', 'compose'].forEach(id => {
+    const button = document.querySelector(`#${id}`);
+    button.addEventListener('click', () => {
+      if (id === 'compose') {
+        compose_email();
+      } else {
+        load_mailbox(id);
+      }
+    });
+  });
+
   document.querySelector('#compose-form').addEventListener('submit', send_email);
 
   // By default, load the inbox
@@ -15,6 +22,7 @@ function compose_email() {
 
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-details').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
@@ -37,19 +45,14 @@ function load_mailbox(mailbox) {
   .then(response => response.json())
   .then(emails => {
     emails.forEach(email => {
-      console.log(email);
       const emailDiv = document.createElement('div')
-      emailDiv.classList.add('email-box')
-      if (email.read) {
-        emailDiv.classList.add('read')
-      } else {
-        emailDiv.classList.add('unread')
-      }
+      emailDiv.classList.add('d-flex', 'justify-content-between' ,'list-group-item', 'list-group-item-action', email.read ? 'list-group-item-light' : 'list-group-item-secondary', 'email-box')
+    
       
       emailDiv.innerHTML = `
-        <strong>${email.sender}</strong>
-        <span>${email.subject}</span>
-        <span>${email.timestamp}</span>
+        <strong class="mr-2">${email.sender}</strong>
+        <span class="mr-2">${email.subject}</span>
+        <span class="mr-2">${email.timestamp}</span>
       `
       emailDiv.addEventListener('click', () => view_email(email.id,mailbox))
       document.querySelector('#emails-view').append(emailDiv)
@@ -97,15 +100,32 @@ function view_email(email_id, mailbox) {
           <strong>Subject:</strong> ${email.subject}<br>
           <strong>Timestamp:</strong> ${email.timestamp}<br>
           <hr>
-          <div>${email.body}</div>
+          <div> ${email.body.replace(/\n/g, "<br>")}</div>
+          <button id="reply"  class="btn btn-info mt-3">Reply</button>
       `;
 
       if (mailbox !== 'sent') {
         emailDetailsDiv.innerHTML += `
-            <button id="archive">${email.archived ? "Unarchive" : "Archive"}</button>
+            <button id="archived" class="btn btn-secondary mt-3">${email.archived ? "Unarchive" : "Archive"}</button>
         `;
-        document.querySelector('#archive').addEventListener('click',() => archive_unarchive_emails(email_id,mailbox))
+        document.querySelector('#archived').addEventListener('click',() => archive_unarchive_emails(email_id,mailbox))
     }
+        document.querySelector('#reply').addEventListener('click',() => {
+          document.querySelector('#emails-view').style.display = 'none';
+          document.querySelector('#email-details').style.display = 'none';
+          document.querySelector('#compose-view').style.display = 'block';
+
+          document.querySelector('#compose-recipients').value = email.sender;
+          document.querySelector('#compose-subject').value = email.subject.includes("Re: ")? email.subject : "Re: " + email.subject;
+          document.querySelector('#compose-body').innerHTML =  `
+          
+          On ${email.timestamp} ${email.sender} wrote: 
+
+          ${email.body}
+
+          `;
+
+        })
 
       // Show the email view and hide the mailbox view
       document.querySelector('#emails-view').style.display = 'none';
